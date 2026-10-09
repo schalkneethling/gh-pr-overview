@@ -1,0 +1,62 @@
+/*
+ * Palette: https://coolors.co/palette/00fddc-2e5339-495f41-ff5666-ffccc9
+ * Ink, paper, and ember extend the palette (a darker and a lighter neutral, and
+ * a deeper coral for light surfaces) so text reaches WCAG AA or better on every
+ * surface. Ratios are noted per pairing.
+ */
+:root {
+  --palette-aqua: #00fddc;
+  --palette-forest: #2e5339;
+  --palette-moss: #495f41;
+  --palette-coral: #ff5666;
+  --palette-blush: #ffccc9;
+  --palette-ink: #132219;
+  --palette-paper: #fff4f3;
+  --palette-ember: #b3202f;
+
+  /* One "pixel" of the 16-bit grid. Every frame, shadow, and step is a multiple. */
+  --pixel: 4px;
+  --space-xs: 0.25rem;
+  --space-s: 0.5rem;
+  --space-m: 1rem;
+  --space-l: 1.5rem;
+  --space-xl: 2.5rem;
+  --content-max-inline-size: 60rem;
+
+  /* Dark is the default: the app is a game screen. */
+  --color-page: var(--palette-forest);
+  --color-panel: var(--palette-ink);
+  --color-text: var(--palette-blush); /* 6.11:1 on forest, 11.6:1 on ink */
+  --color-link: var(--palette-aqua); /* 12.66:1 on ink */
+  --color-frame: var(--palette-blush);
+  --color-drop: var(--palette-ink);
+  --color-accent-on-page: var(--palette-aqua); /* 6.67:1 on forest; coral fails here */
+  --color-highlight: var(--palette-coral); /* panels only: 5.33:1 on ink */
+  --color-on-highlight: var(--palette-ink); /* 5.33:1 */
+  --color-button: var(--palette-aqua);
+  --color-on-button: var(--palette-ink); /* 12.66:1 */
+  --color-button-hover: var(--palette-blush);
+  --color-on-button-hover: var(--palette-ink); /* 11.6:1 */
+  --color-focus: var(--palette-aqua);
+
+  color-scheme: dark light;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-page: var(--palette-blush);
+    --color-panel: var(--palette-paper);
+    --color-text: var(--palette-ink); /* 11.6:1 on blush, higher on paper */
+    --color-link: var(--palette-forest); /* 8.08:1 on paper */
+    --color-frame: var(--palette-forest);
+    --color-drop: var(--palette-moss);
+    --color-accent-on-page: var(--palette-moss); /* 4.92:1 on blush */
+    --color-highlight: var(--palette-ember); /* 6.16:1 on paper */
+    --color-on-highlight: var(--palette-paper); /* 6.16:1 */
+    --color-button: var(--palette-forest);
+    --color-on-button: var(--palette-aqua); /* 6.67:1 */
+    --color-button-hover: var(--palette-ink);
+    --color-on-button-hover: var(--palette-aqua); /* 12.66:1 */
+    --color-focus: var(--palette-ink); /* 11.6:1 on blush */
+  }
+}

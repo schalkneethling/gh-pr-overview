@@ -1,0 +1,92 @@
+/* Fonts are self-hosted via @fontsource (imported in src/main.ts) instead of a Google Fonts @import. */
+
+:root {
+  --typescale-ratio: 1.125; /* ratio this static scale was generated against */
+  --typo-body-family: "Inter", system-ui, sans-serif;
+  --typo-heading-family: "Poppins", "Georgia", serif;
+  --typo-body-weight-default: 400;
+  --typo-heading-weight-default: 800;
+  --typo-line-height: 1.5;
+  --typo-letter-spacing: 0;
+  --typo-size-xs: clamp(0.691rem, 0.622rem + 0.3vi, 0.889rem);
+  --typo-size-small: clamp(0.778rem, 0.7rem + 0.33vi, 1rem);
+  --typo-size-default: clamp(0.875rem, 0.787rem + 0.38vi, 1.125rem);
+  --typo-size-sm-md: clamp(0.984rem, 0.885rem + 0.42vi, 1.266rem);
+  --typo-size-md: clamp(1.108rem, 0.996rem + 0.48vi, 1.424rem);
+  --typo-size-lg: clamp(1.246rem, 1.121rem + 0.53vi, 1.602rem);
+  --typo-size-xl: clamp(1.402rem, 1.261rem + 0.6vi, 1.802rem);
+  --typo-size-xxl: clamp(1.577rem, 1.418rem + 0.68vi, 2.027rem);
+  --typo-size-display: clamp(1.774rem, 1.595rem + 0.76vi, 2.28rem);
+}
+
+.typo-xs {
+  font-family: var(--typo-body-family);
+  font-size: var(--typo-size-xs);
+  font-weight: var(--typo-body-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}
+
+.typo-small {
+  font-family: var(--typo-body-family);
+  font-size: var(--typo-size-small);
+  font-weight: var(--typo-body-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}
+
+.typo-default {
+  font-family: var(--typo-body-family);
+  font-size: var(--typo-size-default);
+  font-weight: var(--typo-body-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}
+
+.typo-sm-md {
+  font-family: var(--typo-heading-family);
+  font-size: var(--typo-size-sm-md);
+  font-weight: var(--typo-heading-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}
+
+.typo-md {
+  font-family: var(--typo-heading-family);
+  font-size: var(--typo-size-md);
+  font-weight: var(--typo-heading-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}
+
+.typo-lg {
+  font-family: var(--typo-heading-family);
+  font-size: var(--typo-size-lg);
+  font-weight: var(--typo-heading-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}
+
+.typo-xl {
+  font-family: var(--typo-heading-family);
+  font-size: var(--typo-size-xl);
+  font-weight: var(--typo-heading-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}
+
+.typo-xxl {
+  font-family: var(--typo-heading-family);
+  font-size: var(--typo-size-xxl);
+  font-weight: var(--typo-heading-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}
+
+.typo-display {
+  font-family: var(--typo-heading-family);
+  font-size: var(--typo-size-display);
+  font-weight: var(--typo-heading-weight-default);
+  letter-spacing: var(--typo-letter-spacing);
+  line-height: var(--typo-line-height);
+}

@@ -1,0 +1,609 @@
+/* ---------- Base ---------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-page);
+  color: var(--color-text);
+  font-family: var(--typo-body-family);
+  font-size: var(--typo-size-default);
+  line-height: var(--typo-line-height);
+  margin: 0;
+  min-block-size: 100dvb;
+}
+
+a {
+  color: var(--color-link);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-style: dashed;
+}
+
+:focus-visible {
+  outline: 3px dashed var(--color-focus);
+  outline-offset: calc(var(--pixel) * 2);
+}
+
+h1,
+h2,
+p,
+dl,
+dd {
+  margin: 0;
+}
+
+pr-quest-app {
+  display: grid;
+  gap: var(--space-xl);
+  margin-inline: auto;
+  max-inline-size: var(--content-max-inline-size);
+  padding-block: var(--space-l) var(--space-xl);
+  padding-inline: var(--space-m);
+}
+
+.noscript {
+  padding: var(--space-m);
+}
+
+/* ---------- Pixel frame ----------
+ * Four offset shadows draw a border with notched corners, the classic 16-bit
+ * window. A fifth shadow adds the hard drop shadow.
+ */
+
+.pixel-frame {
+  background-color: var(--color-panel);
+  box-shadow:
+    0 calc(var(--pixel) * -1) 0 0 var(--color-frame),
+    0 var(--pixel) 0 0 var(--color-frame),
+    calc(var(--pixel) * -1) 0 0 0 var(--color-frame),
+    var(--pixel) 0 0 0 var(--color-frame),
+    calc(var(--pixel) * 3) calc(var(--pixel) * 3) 0 0 var(--color-drop);
+}
+
+@media (forced-colors: active) {
+  .pixel-frame {
+    border: 2px solid CanvasText;
+  }
+}
+
+/* ---------- Header ---------- */
+
+.site-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-m);
+  justify-content: space-between;
+}
+
+.brand {
+  align-items: center;
+  display: flex;
+  gap: var(--space-s);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.brand-sprite,
+.player-avatar {
+  image-rendering: pixelated;
+}
+
+/* Moving content stops within 5 seconds (WCAG 2.2.2). */
+.brand-sprite {
+  animation: bob 0.6s steps(1) 6 alternate;
+}
+
+.player {
+  align-items: center;
+  display: flex;
+  gap: var(--space-s);
+}
+
+.player-avatar {
+  box-shadow: 0 0 0 var(--pixel) var(--color-frame);
+}
+
+.player-label {
+  color: var(--color-accent-on-page);
+  display: block;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------- Stage ---------- */
+
+.stage {
+  display: grid;
+  gap: var(--space-l);
+}
+
+.title-owner {
+  color: var(--color-accent-on-page);
+  display: block;
+  font-size: var(--typo-size-lg);
+}
+
+.hud {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.hud-stat {
+  display: grid;
+  min-inline-size: 0;
+}
+
+.hud-stat dt {
+  order: 1;
+  text-transform: uppercase;
+}
+
+@media (width < 30rem) {
+  .hud {
+    gap: var(--space-m);
+  }
+
+  .hud-stat {
+    padding: var(--space-xs) var(--space-s);
+  }
+
+  .hud-stat dt {
+    letter-spacing: 0.02em;
+  }
+}
+
+@media (width >= 30rem) {
+  .hud {
+    gap: var(--space-l);
+  }
+
+  .hud-stat {
+    padding: var(--space-s) var(--space-m);
+  }
+
+  .hud-stat dt {
+    letter-spacing: 0.12em;
+  }
+}
+
+.hud-stat dd {
+  color: var(--color-link);
+  font-family: var(--typo-heading-family);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--typo-heading-weight-default);
+  line-height: 1.1;
+}
+
+/* ---------- Controls ---------- */
+
+.controls {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-l);
+}
+
+/* ---------- Owner picker ----------
+ * Native select styles first, so browsers without customizable select still
+ * get a pixel panel. The @supports block below opts in to base-select.
+ */
+
+.owner-picker {
+  display: grid;
+  flex: 0 1 18rem;
+  gap: var(--space-s);
+}
+
+.owner-select {
+  border: 0;
+  border-radius: 0;
+  color: var(--color-text);
+  cursor: pointer;
+  inline-size: calc(100% - var(--pixel) * 2);
+  margin: var(--pixel);
+  padding: var(--space-s) var(--space-m);
+}
+
+.owner-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.owner-avatar {
+  box-shadow: 0 0 0 calc(var(--pixel) / 2) var(--color-frame);
+  image-rendering: pixelated;
+}
+
+/* stylelint-disable plugin/use-baseline -- Progressive enhancement: this block applies only where customizable select is supported. */
+@supports (appearance: base-select) {
+  .owner-select,
+  .owner-select::picker(select) {
+    appearance: base-select;
+  }
+
+  .owner-select {
+    align-items: center;
+    display: flex;
+    gap: var(--space-s);
+  }
+
+  /* Matches .button hover, so every control on the page reacts the same way. */
+  .owner-select:open,
+  .owner-select:hover:not(:disabled) {
+    background-color: var(--color-button-hover);
+    color: var(--color-on-button-hover);
+  }
+
+  .owner-select:open::picker-icon {
+    rotate: 180deg;
+  }
+
+  .owner-select selectedcontent {
+    align-items: center;
+    display: flex;
+    gap: var(--space-s);
+  }
+
+  /* The picker is another pixel-frame panel, dropped below the button. */
+  .owner-select::picker(select) {
+    background-color: var(--color-panel);
+    border: 0;
+    box-shadow:
+      0 calc(var(--pixel) * -1) 0 0 var(--color-frame),
+      0 var(--pixel) 0 0 var(--color-frame),
+      calc(var(--pixel) * -1) 0 0 0 var(--color-frame),
+      var(--pixel) 0 0 0 var(--color-frame),
+      calc(var(--pixel) * 3) calc(var(--pixel) * 3) 0 0 var(--color-drop);
+    color: var(--color-text);
+    margin-block: calc(var(--pixel) * 3);
+    padding: var(--space-xs);
+  }
+
+  .owner-select option {
+    align-items: center;
+    display: flex;
+    gap: var(--space-s);
+    outline-offset: calc(var(--pixel) * -1);
+    padding: var(--space-xs) var(--space-s);
+  }
+
+  .owner-select option:hover,
+  .owner-select option:focus-visible {
+    background-color: var(--color-button-hover);
+    color: var(--color-on-button-hover);
+  }
+
+  .owner-select option:checked {
+    font-weight: 700;
+  }
+
+  /* The menu cursor from the quest list marks the current owner. */
+  .owner-select option::checkmark {
+    content: "▶";
+  }
+
+  @media (forced-colors: active) {
+    .owner-select::picker(select) {
+      border: 2px solid CanvasText;
+    }
+  }
+}
+/* stylelint-enable plugin/use-baseline */
+
+.filter {
+  flex: 1 1 18rem;
+}
+
+.filter form {
+  display: grid;
+  gap: var(--space-s);
+}
+
+.filter-input {
+  border: 0;
+  border-radius: 0;
+  color: var(--color-text);
+  inline-size: 100%;
+  margin: var(--pixel);
+  max-inline-size: calc(100% - var(--pixel) * 2);
+  padding: var(--space-s) var(--space-m);
+}
+
+.filter-input:disabled {
+  opacity: 0.6;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-m);
+}
+
+.button {
+  background-color: var(--color-button);
+  border: 0;
+  border-radius: 0;
+  color: var(--color-on-button);
+  cursor: pointer;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: var(--pixel);
+  padding: var(--space-s) var(--space-m);
+  text-transform: uppercase;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Every button variant shares one hover state, so text and background always come as a pair. */
+.button:hover:not(:disabled) {
+  background-color: var(--color-button-hover);
+  color: var(--color-on-button-hover);
+}
+
+/* Press: the button drops into its own shadow. */
+.button:active:not(:disabled) {
+  box-shadow:
+    0 calc(var(--pixel) * -1) 0 0 var(--color-frame),
+    0 var(--pixel) 0 0 var(--color-frame),
+    calc(var(--pixel) * -1) 0 0 0 var(--color-frame),
+    var(--pixel) 0 0 0 var(--color-frame);
+  translate: calc(var(--pixel) * 3) calc(var(--pixel) * 3);
+}
+
+.button-quiet {
+  background-color: var(--color-panel);
+  color: var(--color-text);
+}
+
+.button-quiet::before {
+  content: "♪ ";
+}
+
+.button-quiet[aria-pressed="false"] {
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
+.status-line {
+  min-block-size: 1lh;
+}
+
+/* ---------- Results ---------- */
+
+.results {
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.loading,
+.all-clear,
+.game-over {
+  display: grid;
+  gap: var(--space-m);
+  justify-items: center;
+  padding: var(--space-xl) var(--space-m);
+  text-align: center;
+}
+
+.loading-text {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.loading-text::after {
+  animation: dots 1.2s steps(4) infinite;
+  content: "";
+  display: inline-block;
+  inline-size: 3ch;
+  text-align: start;
+}
+
+.loading-bar {
+  animation: fill 1.6s steps(8) infinite;
+  background-image: linear-gradient(
+    to right,
+    var(--color-link) 0 var(--fill, 0%),
+    transparent var(--fill, 0%)
+  );
+  block-size: calc(var(--pixel) * 4);
+  box-shadow: 0 0 0 var(--pixel) var(--color-frame);
+  inline-size: min(100%, 16rem);
+}
+
+.game-over-title {
+  color: var(--color-highlight);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.world {
+  display: grid;
+  gap: var(--space-m);
+  padding: var(--space-m) var(--space-l) var(--space-l);
+}
+
+.world-header {
+  align-items: baseline;
+  column-gap: var(--space-m);
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.world-label {
+  color: var(--color-highlight);
+  font-weight: 700;
+  grid-column: 1 / -1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.world-title {
+  overflow-wrap: anywhere;
+}
+
+.world-count {
+  white-space: nowrap;
+}
+
+.world-meter {
+  background-image: linear-gradient(
+    to right,
+    var(--color-highlight) 0 var(--fill),
+    transparent var(--fill)
+  );
+  block-size: calc(var(--pixel) * 2);
+  box-shadow: 0 0 0 calc(var(--pixel) / 2) var(--color-frame);
+  grid-column: 1 / -1;
+  margin-block-start: var(--space-s);
+}
+
+.quest-list {
+  display: grid;
+  gap: var(--space-m);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.quest {
+  animation: quest-in 0.32s steps(4) both;
+  animation-delay: calc(var(--stagger, 0) * 0.05s);
+  display: grid;
+  gap: var(--space-xs);
+  padding-inline-start: var(--space-l);
+  position: relative;
+}
+
+/* Menu cursor: a pointer marks the row under the pointer or focus, blinking a few times. */
+.quest::before {
+  color: var(--color-highlight);
+  content: "▶";
+  inset-block-start: 0.1em;
+  inset-inline-start: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.quest:hover::before,
+.quest:focus-within::before {
+  animation: blink 0.8s steps(1) 4;
+  opacity: 1;
+}
+
+.quest-link {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.quest-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs) var(--space-m);
+}
+
+.quest-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  background-color: var(--color-highlight);
+  color: var(--color-on-highlight);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding-inline: var(--space-s);
+  text-transform: uppercase;
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  border-block-start: var(--pixel) dashed var(--color-frame);
+  padding-block-start: var(--space-m);
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes bob {
+  to {
+    translate: 0 calc(var(--pixel) * -1);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes dots {
+  0% {
+    content: "";
+  }
+
+  25% {
+    content: ".";
+  }
+
+  50% {
+    content: "..";
+  }
+
+  75% {
+    content: "...";
+  }
+}
+
+@keyframes fill {
+  from {
+    --fill: 0%;
+  }
+
+  to {
+    --fill: 100%;
+  }
+}
+
+@keyframes quest-in {
+  from {
+    opacity: 0;
+    translate: calc(var(--pixel) * -4) 0;
+  }
+}
+
+@property --fill {
+  inherits: false;
+  initial-value: 0%;
+  syntax: "<percentage>";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .loading-bar {
+    --fill: 50%;
+  }
+
+  .quest {
+    animation: none;
+  }
+}

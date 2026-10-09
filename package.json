@@ -1,0 +1,54 @@
+{
+  "name": "gh-pr-overview",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev",
+    "build": "tsc -b && vp build",
+    "deploy": "vp run build && varlock-wrangler deploy",
+    "types": "varlock codegen && wrangler types",
+    "preview": "vp preview",
+    "prepare": "vp config",
+    "lint:styles": "stylelint \"**/*.{css,scss}\"",
+    "lint:styles:fix": "stylelint \"**/*.{css,scss}\" --fix",
+    "lint:html": "html-validate \"**/*.html\"",
+    "repo:controls:check": "node scripts/repository-controls.mjs",
+    "repo:controls:apply": "node scripts/repository-controls.mjs --apply",
+    "quality": "vp check && vp test --passWithNoTests && pnpm lint:styles && pnpm lint:html"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/poppins": "^5.3.0",
+    "@octokit/core": "^7.0.8",
+    "jose": "^6.2.12",
+    "lit": "^3.3.3"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.63.0",
+    "@schalkneethling/stylelint-plugin-css-property-type-validator": "0.1.0-beta.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/user-event": "^14.6.7",
+    "@varlock/1password-plugin": "^2.0.4",
+    "@varlock/cloudflare-integration": "^1.6.0",
+    "happy-dom": "^20.14.5",
+    "html-validate": "^11.16.2",
+    "stylelint": "^17.16.0",
+    "stylelint-config-standard": "^40.0.0",
+    "stylelint-order": "^8.1.1",
+    "stylelint-plugin-logical-css": "^2.1.0",
+    "stylelint-plugin-use-baseline": "^1.4.6",
+    "typescript": "~6.0.2",
+    "varlock": "^1.21.1",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "^4.148.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.10.1",
+      "onFail": "download"
+    }
+  }
+}
