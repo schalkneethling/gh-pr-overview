@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
+import { createRemoteJWKSet, errors, jwtVerify, type JWTVerifyGetKey } from "jose";
 
 /**
  * Verifies the Cloudflare Access JWT on API requests. Access already blocks
@@ -59,11 +59,40 @@ export function createAccessVerifier(
       });
 
       return { allowed: true };
-    } catch {
+    } catch (error) {
+      console.error(JSON.stringify(describeRejection(error)));
+
       return {
         allowed: false,
         reason: "Your Cloudflare Access session is not valid. Reload the page to sign in again.",
       };
     }
   };
+}
+
+/** Claims that identify the Access team and application, never the person. */
+const IDENTIFYING_CLAIMS = new Set(["iss", "aud"]);
+
+/**
+ * Says why a token was refused, for the Worker logs. Never includes the token,
+ * and of its claims only `iss` or `aud`, so a team or audience mismatch shows
+ * the value Access sent without logging who signed in.
+ */
+function describeRejection(error: unknown) {
+  const rejection = {
+    message: "Cloudflare Access token refused",
+    code: error instanceof errors.JOSEError ? error.code : null,
+    error: error instanceof Error ? error.message : String(error),
+  };
+
+  if (error instanceof errors.JWTClaimValidationFailed || error instanceof errors.JWTExpired) {
+    return {
+      ...rejection,
+      claim: error.claim,
+      reason: error.reason,
+      received: IDENTIFYING_CLAIMS.has(error.claim) ? (error.payload[error.claim] ?? null) : null,
+    };
+  }
+
+  return rejection;
 }

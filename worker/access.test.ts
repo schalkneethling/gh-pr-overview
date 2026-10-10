@@ -1,5 +1,5 @@
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
-import { beforeAll, describe, expect, it } from "vite-plus/test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { ACCESS_JWT_HEADER, createAccessVerifier, type AccessVerifier } from "./access.ts";
 
@@ -44,6 +44,16 @@ function requestWith(token?: string): Request {
 }
 
 describe("Cloudflare Access verification", () => {
+  let log: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    log = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("allows a request with a valid Access token for this application", async () => {
     expect(await verify(requestWith(await signAccessToken()))).toEqual({ allowed: true });
   });
@@ -63,6 +73,31 @@ describe("Cloudflare Access verification", () => {
     const result = await verify(requestWith(await signAccessToken(claims)));
 
     expect(result.allowed).toBe(false);
+  });
+
+  it("logs the audience Access sent when it belongs to another application", async () => {
+    const token = await signAccessToken({ audience: "other-application-aud" });
+
+    await verify(requestWith(token));
+
+    expect(log).toHaveBeenCalledOnce();
+    expect(JSON.parse(log.mock.calls[0][0] as string)).toMatchObject({
+      message: "Cloudflare Access token refused",
+      code: "ERR_JWT_CLAIM_VALIDATION_FAILED",
+      claim: "aud",
+      received: "other-application-aud",
+    });
+  });
+
+  it("never logs the token or who signed in", async () => {
+    const token = await signAccessToken({ expiresIn: "-1m" });
+
+    await verify(requestWith(token));
+
+    const logged = JSON.stringify(log.mock.calls);
+    expect(logged).toContain("ERR_JWT_EXPIRED");
+    expect(logged).not.toContain(token);
+    expect(logged).not.toContain("player@example.com");
   });
 
   it("refuses a token signed with a key Access did not publish", async () => {
