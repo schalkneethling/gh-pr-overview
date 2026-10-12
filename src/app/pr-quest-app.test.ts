@@ -20,6 +20,7 @@ function payload(overrides: Partial<PullRequestsPayload> = {}): PullRequestsPayl
         url: "https://github.com/TFG-Labs/web/pull/7",
         draft: false,
         updatedAt: "2026-10-07T12:00:00Z",
+        reviewStatus: "approved",
       },
       {
         repository: "api",
@@ -28,6 +29,7 @@ function payload(overrides: Partial<PullRequestsPayload> = {}): PullRequestsPayl
         url: "https://github.com/TFG-Labs/api/pull/3",
         draft: true,
         updatedAt: "2026-10-06T12:00:00Z",
+        reviewStatus: "awaiting-review",
       },
       {
         repository: "web",
@@ -36,6 +38,7 @@ function payload(overrides: Partial<PullRequestsPayload> = {}): PullRequestsPayl
         url: "https://github.com/TFG-Labs/web/pull/9",
         draft: false,
         updatedAt: "2026-10-05T12:00:00Z",
+        reviewStatus: "awaiting-review",
       },
     ],
     ...overrides,
@@ -156,6 +159,42 @@ describe("PR Quest app", () => {
       const api = await screen.findByRole("region", { name: "api" });
 
       expect(within(api).getByText("Draft")).toBeTruthy();
+    });
+
+    it("shows each pull request's review status next to when it was updated", async () => {
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const web = await screen.findByRole("region", { name: "web" });
+      const [login, footer] = within(web).getAllByRole("listitem");
+
+      // The visible label, plus the prefix screen readers announce before it.
+      expect(within(login!).getByText("Approved").textContent).toBe("Review status: Approved");
+      expect(within(footer!).getByText("Awaiting review").textContent).toBe(
+        "Review status: Awaiting review",
+      );
+    });
+
+    it("leaves the review status off drafts, which are not ready for review", async () => {
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const api = await screen.findByRole("region", { name: "api" });
+
+      expect(within(api).queryByText(/review status/i)).toBeNull();
+    });
+
+    it("leaves the review status off when GitHub did not report one", async () => {
+      const [first, ...rest] = payload().pullRequests;
+      serve(() =>
+        jsonResponse(payload({ pullRequests: [{ ...first!, reviewStatus: null }, ...rest] })),
+      );
+      mount();
+
+      const web = await screen.findByRole("region", { name: "web" });
+      const [login] = within(web).getAllByRole("listitem");
+
+      expect(within(login!).queryByText(/review status/i)).toBeNull();
     });
 
     it("names the organisation and the signed-in player", async () => {

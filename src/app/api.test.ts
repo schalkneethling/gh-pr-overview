@@ -15,6 +15,7 @@ const valid = {
       url: "https://github.com/TFG-Labs/web/pull/7",
       draft: false,
       updatedAt: "2026-10-07T12:00:00Z",
+      reviewStatus: "awaiting-review",
     },
   ],
 };
@@ -31,6 +32,21 @@ describe("isPullRequestsPayload", () => {
     };
 
     expect(isPullRequestsPayload(hostile)).toBe(false);
+  });
+
+  it.each(["approved", "changes-requested", "awaiting-review", null])(
+    "accepts the review status %j",
+    (reviewStatus) => {
+      const payload = { ...valid, pullRequests: [{ ...valid.pullRequests[0], reviewStatus }] };
+
+      expect(isPullRequestsPayload(payload)).toBe(true);
+    },
+  );
+
+  it.each(["APPROVED", "merged", undefined])("rejects the review status %j", (reviewStatus) => {
+    const payload = { ...valid, pullRequests: [{ ...valid.pullRequests[0], reviewStatus }] };
+
+    expect(isPullRequestsPayload(payload)).toBe(false);
   });
 
   it("rejects avatar URLs from other hosts", () => {

@@ -52,6 +52,16 @@ pr-quest-app {
   padding: var(--space-m);
 }
 
+/* Read by screen readers, invisible on screen. */
+.visually-hidden {
+  block-size: 1px;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+}
+
 /* ---------- Pixel frame ----------
  * Four offset shadows draw a border with notched corners, the classic 16-bit
  * window. A fifth shadow adds the hard drop shadow.
@@ -525,6 +535,21 @@ pr-quest-app {
   letter-spacing: 0.08em;
   padding-inline: var(--space-s);
   text-transform: uppercase;
+}
+
+/* An outline, not a fill, so it never competes with the Draft badge. */
+.review-status {
+  border: calc(var(--pixel) / 2) solid currentcolor;
+  font-weight: 700;
+  padding-inline: var(--space-s);
+}
+
+.review-status[data-status="approved"] {
+  color: var(--color-link);
+}
+
+.review-status[data-status="changes-requested"] {
+  color: var(--color-highlight);
 }
 
 /* ---------- Footer ---------- */

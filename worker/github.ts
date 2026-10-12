@@ -5,7 +5,9 @@ import type {
   OwnersPayload,
   PullRequestSummary,
   PullRequestsPayload,
+  ReviewStatus,
 } from "../src/shared/pull-requests.ts";
+import { isRecord } from "../src/shared/is-record.ts";
 
 export interface GitHubConfig {
   token: string;
@@ -13,11 +15,19 @@ export interface GitHubConfig {
   org: string;
 }
 
-/** The `--limit 100` of the original command; also the Search API page maximum. */
+/**
+ * The `--limit 100` of the original command; also the Search API page maximum,
+ * and the most node IDs GraphQL's `nodes(ids:)` accepts in one review status lookup.
+ */
 const PAGE_SIZE = 100;
 
 // GitHub logins: alphanumeric or single hyphens, 1–39 characters.
 const GITHUB_LOGIN_PATTERN = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/i;
+
+/** GitHub answered the review status lookup with errors and no data at all. */
+class GitHubGraphqlError extends Error {
+  override name = "GitHubGraphqlError";
+}
 
 /** The deployment's settings are wrong; only the operator can fix it. */
 export class GitHubConfigError extends Error {
@@ -51,6 +61,109 @@ function repositoryName(repositoryUrl: string): string {
 }
 
 /**
+ * GitHub's `PullRequestReviewDecision`, mapped to the app's statuses.
+ * https://docs.github.com/en/graphql/reference/enums#pullrequestreviewdecision
+ *
+ * The docs do not say when `reviewDecision` is null. In practice GitHub reports
+ * null when the base branch does not require reviews and nobody has approved or
+ * requested changes yet, so null is treated as "awaiting review".
+ */
+const REVIEW_DECISIONS: Readonly<Record<string, ReviewStatus>> = {
+  APPROVED: "approved",
+  CHANGES_REQUESTED: "changes-requested",
+  REVIEW_REQUIRED: "awaiting-review",
+};
+
+// The Search API does not report review status, so it is looked up by node ID.
+const REVIEW_DECISIONS_QUERY = `
+  query ($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on PullRequest {
+        id
+        reviewDecision
+      }
+    }
+  }
+`;
+
+/** The parts of a GraphQL error worth logging: its type (such as NOT_FOUND) and message. */
+function describeError(error: unknown): { type: string | null; message: string } {
+  if (!isRecord(error)) {
+    return { type: null, message: String(error) };
+  }
+
+  return {
+    type: typeof error.type === "string" ? error.type : null,
+    message: typeof error.message === "string" ? error.message : "",
+  };
+}
+
+function toReviewStatus(reviewDecision: unknown): ReviewStatus | null {
+  if (reviewDecision === null) {
+    return "awaiting-review";
+  }
+
+  return typeof reviewDecision === "string" ? (REVIEW_DECISIONS[reviewDecision] ?? null) : null;
+}
+
+/**
+ * Review status per pull request node ID. A pull request GitHub could not
+ * resolve is left out, and the reasons are logged, so one unreadable pull
+ * request does not hide the whole list.
+ */
+async function fetchReviewStatuses(
+  octokit: Octokit,
+  ids: readonly string[],
+): Promise<Map<string, ReviewStatus>> {
+  const statuses = new Map<string, ReviewStatus>();
+
+  if (ids.length === 0) {
+    return statuses;
+  }
+
+  const { data: body }: { data: unknown } = await octokit.request("POST /graphql", {
+    query: REVIEW_DECISIONS_QUERY,
+    variables: { ids },
+  });
+
+  const errors = isRecord(body) && Array.isArray(body.errors) ? body.errors.map(describeError) : [];
+  const data = isRecord(body) ? body.data : undefined;
+
+  // GitHub answers request-level failures, such as its GraphQL rate limit, with
+  // HTTP 200, errors, and no data. Only errors about single nodes are tolerated.
+  if (!isRecord(data)) {
+    throw new GitHubGraphqlError(
+      `GitHub answered the review status lookup without data: ${JSON.stringify(errors)}`,
+    );
+  }
+
+  if (errors.length > 0) {
+    console.error(
+      JSON.stringify({
+        message: "GitHub could not report the review status of some pull requests",
+        errors,
+      }),
+    );
+  }
+
+  const { nodes } = data;
+
+  for (const node of Array.isArray(nodes) ? nodes : []) {
+    if (!isRecord(node) || typeof node.id !== "string" || !("reviewDecision" in node)) {
+      continue;
+    }
+
+    const status = toReviewStatus(node.reviewDecision);
+
+    if (status) {
+      statuses.set(node.id, status);
+    }
+  }
+
+  return statuses;
+}
+
+/**
  * Equivalent of:
  * gh search prs --author @me --state open --owner <owner> --limit 100
  *
@@ -81,6 +194,11 @@ export async function searchOpenPullRequests(
     }),
   ]);
 
+  const reviewStatuses = await fetchReviewStatuses(
+    octokit,
+    search.data.items.map(({ node_id }) => node_id),
+  );
+
   const pullRequests: PullRequestSummary[] = search.data.items.map((item) => ({
     repository: repositoryName(item.repository_url),
     number: item.number,
@@ -88,6 +206,7 @@ export async function searchOpenPullRequests(
     url: item.html_url,
     draft: item.draft ?? false,
     updatedAt: item.updated_at,
+    reviewStatus: reviewStatuses.get(item.node_id) ?? null,
   }));
 
   return {
