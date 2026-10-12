@@ -10,6 +10,7 @@ function pullRequest(overrides: Partial<PullRequestSummary>): PullRequestSummary
     url: "https://github.com/TFG-Labs/web/pull/1",
     draft: false,
     updatedAt: "2026-10-01T10:00:00Z",
+    reviewStatus: "awaiting-review",
     ...overrides,
   };
 }

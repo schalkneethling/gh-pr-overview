@@ -3,6 +3,19 @@
  * these types, so a change here is a change to the API.
  */
 
+/**
+ * Where a pull request stands with its reviewers. "awaiting-review" also
+ * covers pull requests whose base branch does not require reviews and that
+ * nobody has approved or rejected yet.
+ */
+export type ReviewStatus = "approved" | "changes-requested" | "awaiting-review";
+
+export const REVIEW_STATUSES: readonly ReviewStatus[] = [
+  "approved",
+  "changes-requested",
+  "awaiting-review",
+];
+
 export interface PullRequestSummary {
   repository: string;
   number: number;
@@ -10,6 +23,8 @@ export interface PullRequestSummary {
   url: string;
   draft: boolean;
   updatedAt: string;
+  /** Null when GitHub did not report a review status for this pull request. */
+  reviewStatus: ReviewStatus | null;
 }
 
 export interface Viewer {

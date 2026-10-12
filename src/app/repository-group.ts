@@ -1,7 +1,7 @@
 import { html, type TemplateResult } from "lit";
 import { styleMap } from "lit/directives/style-map.js";
 
-import type { RepositoryGroup } from "../shared/pull-requests.ts";
+import type { PullRequestSummary, RepositoryGroup, ReviewStatus } from "../shared/pull-requests.ts";
 import { formatRelativeTime, pluralize } from "./format.ts";
 
 interface RepositoryGroupOptions {
@@ -14,6 +14,24 @@ interface RepositoryGroupOptions {
 
 // Entry animations stop staggering after this many rows so long lists settle quickly.
 const MAX_STAGGER_STEPS = 12;
+
+const REVIEW_STATUS_LABELS: Readonly<Record<ReviewStatus, string>> = {
+  approved: "Approved",
+  "changes-requested": "Changes requested",
+  "awaiting-review": "Awaiting review",
+};
+
+// Drafts are not ready for review yet, so their review status would mislead.
+function renderReviewStatus({ draft, reviewStatus }: PullRequestSummary): TemplateResult | null {
+  if (draft || reviewStatus === null) {
+    return null;
+  }
+
+  // The hidden prefix tells screen reader users what "Approved" refers to.
+  return html`<span class="review-status" data-status=${reviewStatus}
+    ><span class="visually-hidden">Review status: </span>${REVIEW_STATUS_LABELS[reviewStatus]}</span
+  >`;
+}
 
 function repositoryPullsUrl(owner: string, repository: string): string {
   const query = encodeURIComponent("is:pr is:open author:@me");
@@ -55,6 +73,7 @@ export function renderRepositoryGroup(
                     >${formatRelativeTime(pullRequest.updatedAt, now)}</time
                   ></span
                 >
+                ${renderReviewStatus(pullRequest)}
               </p>
             </li>
           `,

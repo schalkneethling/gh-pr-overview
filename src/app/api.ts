@@ -2,11 +2,13 @@ import {
   OWNER_PARAM,
   OWNERS_ENDPOINT,
   PULL_REQUESTS_ENDPOINT,
+  REVIEW_STATUSES,
   type Owner,
   type OwnersPayload,
   type PullRequestSummary,
   type PullRequestsPayload,
 } from "../shared/pull-requests.ts";
+import { isRecord } from "../shared/is-record.ts";
 
 export class ApiError extends Error {
   override name = "ApiError";
@@ -15,13 +17,13 @@ export class ApiError extends Error {
 const GITHUB_ORIGIN = "https://github.com/";
 const AVATAR_ORIGIN = "https://avatars.githubusercontent.com/";
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 function isAvatarUrl(value: unknown): boolean {
   // Rendered as an image source, so only GitHub avatars are allowed through.
   return typeof value === "string" && value.startsWith(AVATAR_ORIGIN);
+}
+
+function isReviewStatus(value: unknown): boolean {
+  return value === null || REVIEW_STATUSES.some((status) => status === value);
 }
 
 function isPullRequestSummary(value: unknown): value is PullRequestSummary {
@@ -34,7 +36,8 @@ function isPullRequestSummary(value: unknown): value is PullRequestSummary {
     // Rendered as an href, so only GitHub URLs are allowed through.
     value.url.startsWith(GITHUB_ORIGIN) &&
     typeof value.draft === "boolean" &&
-    typeof value.updatedAt === "string"
+    typeof value.updatedAt === "string" &&
+    isReviewStatus(value.reviewStatus)
   );
 }
 

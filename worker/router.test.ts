@@ -16,6 +16,7 @@ const SEARCH = {
   incomplete_results: false,
   items: [
     {
+      node_id: "PR_web_7",
       number: 7,
       title: "Add login",
       html_url: "https://github.com/TFG-Labs/web/pull/7",
@@ -24,6 +25,7 @@ const SEARCH = {
       updated_at: "2026-10-07T12:00:00Z",
     },
     {
+      node_id: "PR_api_3",
       number: 3,
       title: "Speed up search",
       html_url: "https://github.com/TFG-Labs/api/pull/3",
@@ -31,6 +33,15 @@ const SEARCH = {
       updated_at: "2026-10-06T12:00:00Z",
     },
   ],
+};
+
+const REVIEW_DECISIONS = {
+  data: {
+    nodes: [
+      { id: "PR_web_7", reviewDecision: "APPROVED" },
+      { id: "PR_api_3", reviewDecision: null },
+    ],
+  },
 };
 
 const ORGS = [
@@ -47,7 +58,13 @@ function jsonResponse(body: unknown, status = 200, headers: Record<string, strin
 
 /** Stands in for api.github.com: the only external boundary the Worker talks to. */
 function fakeGitHub(
-  responses: { user?: Response; search?: Response; orgs?: Response; org?: Response } = {},
+  responses: {
+    user?: Response;
+    search?: Response;
+    graphql?: Response;
+    orgs?: Response;
+    org?: Response;
+  } = {},
 ) {
   const requests: Request[] = [];
   const fetchImplementation = vi.fn<typeof fetch>(async (input, init) => {
@@ -61,6 +78,10 @@ function fakeGitHub(
 
     if (pathname === "/search/issues") {
       return responses.search ?? jsonResponse(SEARCH);
+    }
+
+    if (pathname === "/graphql") {
+      return responses.graphql ?? jsonResponse(REVIEW_DECISIONS);
     }
 
     if (pathname === "/user/orgs") {
@@ -130,6 +151,7 @@ describe("GET /api/pull-requests", () => {
           url: "https://github.com/TFG-Labs/web/pull/7",
           draft: true,
           updatedAt: "2026-10-07T12:00:00Z",
+          reviewStatus: "approved",
         },
         {
           repository: "api",
@@ -138,10 +160,140 @@ describe("GET /api/pull-requests", () => {
           url: "https://github.com/TFG-Labs/api/pull/3",
           draft: false,
           updatedAt: "2026-10-06T12:00:00Z",
+          reviewStatus: "awaiting-review",
         },
       ],
     });
     expect(Number.isNaN(Date.parse(body.fetchedAt))).toBe(false);
+  });
+
+  describe("review status", () => {
+    async function reviewStatuses(github: ReturnType<typeof fakeGitHub>) {
+      const response = await handleApiRequest(get("/api/pull-requests"), {
+        github: CONFIG,
+        verifyAccess: allowWithoutAccess,
+        fetch: github.fetchImplementation,
+      });
+      const body = (await response.json()) as PullRequestsPayload;
+
+      return body.pullRequests.map(({ reviewStatus }) => reviewStatus);
+    }
+
+    function graphql(nodes: unknown[], errors?: unknown[]): Response {
+      return jsonResponse({ data: { nodes }, ...(errors ? { errors } : {}) });
+    }
+
+    it("looks up the review decision of every pull request the search found", async () => {
+      const github = fakeGitHub();
+
+      await reviewStatuses(github);
+
+      const lookup = github.requests.find(
+        (request) => new URL(request.url).pathname === "/graphql",
+      );
+      const body = (await lookup?.json()) as { variables: { ids: string[] } };
+
+      expect(lookup?.method).toBe("POST");
+      expect(body.variables.ids).toEqual(["PR_web_7", "PR_api_3"]);
+    });
+
+    it.each([
+      ["APPROVED", "approved"],
+      ["CHANGES_REQUESTED", "changes-requested"],
+      ["REVIEW_REQUIRED", "awaiting-review"],
+      // The base branch does not require reviews and nobody has reviewed yet.
+      [null, "awaiting-review"],
+    ])("reports GitHub's %j decision as %j", async (reviewDecision, reviewStatus) => {
+      const github = fakeGitHub({
+        graphql: graphql([
+          { id: "PR_web_7", reviewDecision },
+          { id: "PR_api_3", reviewDecision },
+        ]),
+      });
+
+      expect(await reviewStatuses(github)).toEqual([reviewStatus, reviewStatus]);
+    });
+
+    it("still lists a pull request GitHub could not resolve, without a status, and logs why", async () => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const github = fakeGitHub({
+        graphql: graphql(
+          [{ id: "PR_web_7", reviewDecision: "APPROVED" }, null],
+          [{ message: "Could not resolve to a node with the global id of 'PR_api_3'" }],
+        ),
+      });
+
+      expect(await reviewStatuses(github)).toEqual(["approved", null]);
+      expect(JSON.stringify(log.mock.calls)).toContain("PR_api_3");
+    });
+
+    it("skips nodes that are not pull requests", async () => {
+      const github = fakeGitHub({
+        graphql: graphql([{}, { id: "PR_api_3", reviewDecision: "APPROVED" }]),
+      });
+
+      expect(await reviewStatuses(github)).toEqual([null, "approved"]);
+    });
+
+    it("fails the request when GitHub answers the lookup with errors and no data", async () => {
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      // GitHub's answer to a spent GraphQL rate limit: HTTP 200, errors, no data.
+      const github = fakeGitHub({
+        graphql: jsonResponse({
+          errors: [{ type: "RATE_LIMITED", message: "API rate limit exceeded" }],
+        }),
+      });
+
+      const response = await handleApiRequest(get("/api/pull-requests"), {
+        github: CONFIG,
+        verifyAccess: allowWithoutAccess,
+        fetch: github.fetchImplementation,
+      });
+
+      expect(response.status).toBe(502);
+      expect(((await response.json()) as { error: string }).error).toMatch(
+        /did not answer as expected/,
+      );
+      expect(JSON.stringify(log.mock.calls)).toContain("RATE_LIMITED");
+    });
+
+    it("leaves the status empty for a decision it does not know", async () => {
+      const github = fakeGitHub({
+        graphql: graphql([
+          { id: "PR_web_7", reviewDecision: "SOMETHING_NEW" },
+          { id: "PR_api_3", reviewDecision: "APPROVED" },
+        ]),
+      });
+
+      expect(await reviewStatuses(github)).toEqual([null, "approved"]);
+    });
+
+    it("skips the lookup when the search found nothing", async () => {
+      const github = fakeGitHub({
+        search: jsonResponse({ total_count: 0, incomplete_results: false, items: [] }),
+      });
+
+      expect(await reviewStatuses(github)).toEqual([]);
+      expect(github.requests.some((request) => new URL(request.url).pathname === "/graphql")).toBe(
+        false,
+      );
+    });
+
+    it("maps a failed lookup like any other GitHub failure", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const github = fakeGitHub({ graphql: jsonResponse({ message: "nope" }, 401) });
+
+      const response = await handleApiRequest(get("/api/pull-requests"), {
+        github: CONFIG,
+        verifyAccess: allowWithoutAccess,
+        fetch: github.fetchImplementation,
+      });
+
+      expect(response.status).toBe(502);
+      expect(((await response.json()) as { error: string }).error).toMatch(
+        /GitHub rejected the token/,
+      );
+    });
   });
 
   it("searches the owner named in the request", async () => {
