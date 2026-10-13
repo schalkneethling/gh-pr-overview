@@ -1,4 +1,5 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
+import { repeat } from "lit/directives/repeat.js";
 
 import {
   formatAsText,
@@ -420,8 +421,13 @@ export class PrQuestApp extends LitElement {
     const maxCount = Math.max(...groups.map(({ pullRequests }) => pullRequests.length));
     const now = Date.now();
 
-    return html`${groups.map((group, index) =>
-      renderRepositoryGroup(group, { owner: payload.owner, index, maxCount, now }),
+    // Keyed by owner and repository, so a world the player collapsed stays
+    // collapsed when filtering or a refresh shifts its position in the list.
+    return html`${repeat(
+      groups,
+      ({ repository }) => `${payload.owner}/${repository}`,
+      (group, index) =>
+        renderRepositoryGroup(group, { owner: payload.owner, index, maxCount, now }),
     )}`;
   }
 

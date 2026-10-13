@@ -141,6 +141,36 @@ describe("PR Quest app", () => {
       expect(within(web).getByText("2 open PRs")).toBeTruthy();
     });
 
+    it("starts every repository expanded and collapses one when its header is clicked", async () => {
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const api = await screen.findByRole("region", { name: "api" });
+      const web = screen.getByRole("region", { name: "web" });
+      const apiDetails = api.querySelector("details");
+      const webDetails = web.querySelector("details");
+
+      expect(apiDetails?.open).toBe(true);
+      expect(webDetails?.open).toBe(true);
+
+      await userEvent.click(within(web).getByRole("heading", { name: "web" }));
+
+      expect(webDetails?.open).toBe(false);
+      expect(apiDetails?.open).toBe(true);
+    });
+
+    it("links each repository to its open pull requests on GitHub", async () => {
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const web = await screen.findByRole("region", { name: "web" });
+      const link = within(web).getByRole("link", { name: "View web PRs on GitHub" });
+
+      expect(link.getAttribute("href")).toBe(
+        "https://github.com/TFG-Labs/web/pulls?q=is%3Apr%20is%3Aopen%20author%3A%40me",
+      );
+    });
+
     it("shows totals for open pull requests, repositories, and drafts", async () => {
       serve(() => jsonResponse(payload()));
       mount();
