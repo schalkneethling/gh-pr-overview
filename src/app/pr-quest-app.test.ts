@@ -277,6 +277,28 @@ describe("PR Quest app", () => {
       expect(screen.queryByRole("region", { name: "web" })).toBeNull();
     });
 
+    it("keeps a collapsed repository collapsed after a filter hides and restores it", async () => {
+      const user = userEvent.setup();
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const web = await screen.findByRole("region", { name: "web" });
+      await user.click(within(web).getByRole("heading", { name: "web" }));
+
+      const filter = screen.getByRole("searchbox", { name: /filter/i });
+      await user.type(filter, "#3");
+
+      expect(screen.queryByRole("region", { name: "web" })).toBeNull();
+
+      await user.clear(filter);
+
+      const restored = screen.getByRole("region", { name: "web" });
+      const api = screen.getByRole("region", { name: "api" });
+
+      expect(restored.querySelector("details")?.open).toBe(false);
+      expect(api.querySelector("details")?.open).toBe(true);
+    });
+
     it("explains when nothing matches", async () => {
       const user = userEvent.setup();
       serve(() => jsonResponse(payload()));

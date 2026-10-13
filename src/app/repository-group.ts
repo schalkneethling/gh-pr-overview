@@ -10,6 +10,10 @@ interface RepositoryGroupOptions {
   /** The largest group size, used to scale the decorative progress bar. */
   maxCount: number;
   now: number;
+  /** Whether the world is expanded; the caller owns this so it outlives the element. */
+  open: boolean;
+  /** Called when the player expands or collapses the world. */
+  onToggle: (open: boolean) => void;
 }
 
 // Entry animations stop staggering after this many rows so long lists settle quickly.
@@ -41,16 +45,22 @@ function repositoryPullsUrl(owner: string, repository: string): string {
 
 export function renderRepositoryGroup(
   { repository, pullRequests }: RepositoryGroup,
-  { owner, index, maxCount, now }: RepositoryGroupOptions,
+  { owner, index, maxCount, now, open, onToggle }: RepositoryGroupOptions,
 ): TemplateResult {
   const headingId = `world-${index}`;
   const fill = `${Math.round((pullRequests.length / maxCount) * 100)}%`;
+
+  const onDetailsToggle = (event: Event): void => {
+    if (event.currentTarget instanceof HTMLDetailsElement) {
+      onToggle(event.currentTarget.open);
+    }
+  };
 
   // The whole header toggles the quest list, so the GitHub link lives in the
   // body: a link nested inside <summary> is a control within a control.
   return html`
     <section class="world pixel-frame" aria-labelledby=${headingId}>
-      <details class="world-details" open>
+      <details class="world-details" ?open=${open} @toggle=${onDetailsToggle}>
         <summary class="world-header">
           <p class="world-label typo-xs">World ${index + 1}</p>
           <h2 class="world-title typo-md" id=${headingId}>${repository}</h2>

@@ -6,6 +6,7 @@ import {
   groupByRepository,
   type PullRequestSummary,
   type PullRequestsPayload,
+  type RepositoryGroup,
   type Viewer,
 } from "../shared/pull-requests.ts";
 import { fetchOwners, fetchPullRequests } from "./api.ts";
@@ -68,6 +69,12 @@ export class PrQuestApp extends LitElement {
   #abortController: AbortController | undefined;
   #ownersAbortController: AbortController | undefined;
   #playCue = createCuePlayer();
+  /**
+   * Worlds the player collapsed, as "owner/repository". Kept here rather than
+   * in the DOM because a filter removes a world's element, and it must come
+   * back collapsed.
+   */
+  #collapsedWorlds = new Set<string>();
 
   constructor() {
     super();
@@ -203,6 +210,14 @@ export class PrQuestApp extends LitElement {
     this.#cue("start");
     this.#selectOwner(event.target.value);
   };
+
+  #onWorldToggle(key: string, open: boolean): void {
+    if (open) {
+      this.#collapsedWorlds.delete(key);
+    } else {
+      this.#collapsedWorlds.add(key);
+    }
+  }
 
   #onToggleSound = (): void => {
     this.soundEnabled = !this.soundEnabled;
@@ -421,14 +436,21 @@ export class PrQuestApp extends LitElement {
     const maxCount = Math.max(...groups.map(({ pullRequests }) => pullRequests.length));
     const now = Date.now();
 
-    // Keyed by owner and repository, so a world the player collapsed stays
-    // collapsed when filtering or a refresh shifts its position in the list.
-    return html`${repeat(
-      groups,
-      ({ repository }) => `${payload.owner}/${repository}`,
-      (group, index) =>
-        renderRepositoryGroup(group, { owner: payload.owner, index, maxCount, now }),
-    )}`;
+    const worldKey = ({ repository }: RepositoryGroup): string => `${payload.owner}/${repository}`;
+
+    // Keyed so each world keeps its element while filtering or a refresh moves it.
+    return html`${repeat(groups, worldKey, (group, index) => {
+      const key = worldKey(group);
+
+      return renderRepositoryGroup(group, {
+        owner: payload.owner,
+        index,
+        maxCount,
+        now,
+        open: !this.#collapsedWorlds.has(key),
+        onToggle: (open) => this.#onWorldToggle(key, open),
+      });
+    })}`;
   }
 
   #renderFooter(): TemplateResult | typeof nothing {
