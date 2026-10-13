@@ -141,6 +141,36 @@ describe("PR Quest app", () => {
       expect(within(web).getByText("2 open PRs")).toBeTruthy();
     });
 
+    it("starts every repository expanded and collapses one when its header is clicked", async () => {
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const api = await screen.findByRole("region", { name: "api" });
+      const web = screen.getByRole("region", { name: "web" });
+      const apiDetails = api.querySelector("details");
+      const webDetails = web.querySelector("details");
+
+      expect(apiDetails?.open).toBe(true);
+      expect(webDetails?.open).toBe(true);
+
+      await userEvent.click(within(web).getByRole("heading", { name: "web" }));
+
+      expect(webDetails?.open).toBe(false);
+      expect(apiDetails?.open).toBe(true);
+    });
+
+    it("links each repository to its open pull requests on GitHub", async () => {
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const web = await screen.findByRole("region", { name: "web" });
+      const link = within(web).getByRole("link", { name: "View web PRs on GitHub" });
+
+      expect(link.getAttribute("href")).toBe(
+        "https://github.com/TFG-Labs/web/pulls?q=is%3Apr%20is%3Aopen%20author%3A%40me",
+      );
+    });
+
     it("shows totals for open pull requests, repositories, and drafts", async () => {
       serve(() => jsonResponse(payload()));
       mount();
@@ -245,6 +275,28 @@ describe("PR Quest app", () => {
 
       expect(screen.getByRole("link", { name: "Speed up search" })).toBeTruthy();
       expect(screen.queryByRole("region", { name: "web" })).toBeNull();
+    });
+
+    it("keeps a collapsed repository collapsed after a filter hides and restores it", async () => {
+      const user = userEvent.setup();
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const web = await screen.findByRole("region", { name: "web" });
+      await user.click(within(web).getByRole("heading", { name: "web" }));
+
+      const filter = screen.getByRole("searchbox", { name: /filter/i });
+      await user.type(filter, "#3");
+
+      expect(screen.queryByRole("region", { name: "web" })).toBeNull();
+
+      await user.clear(filter);
+
+      const restored = screen.getByRole("region", { name: "web" });
+      const api = screen.getByRole("region", { name: "api" });
+
+      expect(restored.querySelector("details")?.open).toBe(false);
+      expect(api.querySelector("details")?.open).toBe(true);
     });
 
     it("explains when nothing matches", async () => {

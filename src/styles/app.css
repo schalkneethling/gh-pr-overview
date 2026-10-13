@@ -439,14 +439,14 @@ pr-quest-app {
 }
 
 .world {
-  display: grid;
-  gap: var(--space-m);
   padding: var(--space-m) var(--space-l) var(--space-l);
 }
 
+/* The whole header is the <summary>, so a click anywhere on it collapses the world. */
 .world-header {
   align-items: baseline;
   column-gap: var(--space-m);
+  cursor: pointer;
   display: grid;
   grid-template-columns: 1fr auto;
 }
@@ -459,8 +459,26 @@ pr-quest-app {
   text-transform: uppercase;
 }
 
+/* A display other than list-item drops the native marker, so this replaces it.
+ * The empty alt text keeps screen readers from announcing the glyph; they
+ * already announce the expanded or collapsed state. */
+.world-label::before {
+  content: "▶" / "";
+  display: inline-block;
+  margin-inline-end: var(--space-s);
+}
+
+.world-details[open] .world-label::before {
+  rotate: 90deg;
+}
+
 .world-title {
   overflow-wrap: anywhere;
+}
+
+.world-header:hover .world-title {
+  text-decoration: underline dashed 2px;
+  text-underline-offset: 0.2em;
 }
 
 .world-count {
@@ -477,6 +495,16 @@ pr-quest-app {
   box-shadow: 0 0 0 calc(var(--pixel) / 2) var(--color-frame);
   grid-column: 1 / -1;
   margin-block-start: var(--space-s);
+}
+
+.world-body {
+  display: grid;
+  gap: var(--space-m);
+  margin-block-start: var(--space-m);
+}
+
+.world-more {
+  justify-self: end;
 }
 
 .quest-list {
