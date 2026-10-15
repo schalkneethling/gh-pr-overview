@@ -345,6 +345,29 @@ describe("PR Quest app", () => {
       expect(screen.queryByRole("alert")).toBeNull();
     });
 
+    it.each([
+      ["Access refuses the session", () => jsonResponse({ error: "Not valid." }, 403)],
+      [
+        "Access redirects to its sign-in page",
+        () => ({ type: "opaqueredirect", status: 0 }) as Response,
+      ],
+    ])("offers to reload the session when %s", async (_case, reply) => {
+      const user = userEvent.setup();
+      const reload = vi.fn();
+      vi.spyOn(window, "location", "get").mockReturnValue({ reload } as unknown as Location);
+      serve(reply);
+      mount();
+
+      const alert = await screen.findByRole("alert");
+
+      expect(within(alert).getByText(/session has expired/i)).toBeTruthy();
+      expect(within(alert).queryByRole("button", { name: "Continue?" })).toBeNull();
+
+      await user.click(within(alert).getByRole("button", { name: "Reload session" }));
+
+      expect(reload).toHaveBeenCalledOnce();
+    });
+
     it("explains a network failure in plain words", async () => {
       fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
       mount();

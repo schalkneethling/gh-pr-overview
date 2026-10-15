@@ -12,7 +12,17 @@ import { isRecord } from "../shared/is-record.ts";
 
 export class ApiError extends Error {
   override name = "ApiError";
+
+  /** True when Cloudflare Access no longer accepts the visitor's session. */
+  readonly sessionExpired: boolean;
+
+  constructor(message: string, { sessionExpired = false } = {}) {
+    super(message);
+    this.sessionExpired = sessionExpired;
+  }
 }
+
+const SESSION_EXPIRED_MESSAGE = "Your session has expired. Reload the page to sign in again.";
 
 const GITHUB_ORIGIN = "https://github.com/";
 const AVATAR_ORIGIN = "https://avatars.githubusercontent.com/";
@@ -91,6 +101,10 @@ async function getJson<T>(
   try {
     response = await fetch(url, {
       headers: { accept: "application/json" },
+      // Access answers an expired session with a redirect to its login page,
+      // which the browser would block as a cross-origin request and report as
+      // a network failure. Not following it lets us recognize that case.
+      redirect: "manual",
       signal,
     });
   } catch (error) {
@@ -99,6 +113,12 @@ async function getJson<T>(
     }
 
     throw new ApiError("Could not reach the server. Check your connection and try again.");
+  }
+
+  // The Worker only answers 403 when Access refuses the session; GitHub's
+  // own refusals are reported as 502.
+  if (response.type === "opaqueredirect" || response.status === 403) {
+    throw new ApiError(SESSION_EXPIRED_MESSAGE, { sessionExpired: true });
   }
 
   const body: unknown = await response.json().catch(() => null);
