@@ -9,7 +9,7 @@ import {
   type RepositoryGroup,
   type Viewer,
 } from "../shared/pull-requests.ts";
-import { fetchOwners, fetchPullRequests } from "./api.ts";
+import { ApiError, fetchOwners, fetchPullRequests } from "./api.ts";
 import { avatarAtSize, pluralize } from "./format.ts";
 import { renderOwnerPicker, type OwnersState } from "./owner-picker.ts";
 import {
@@ -24,7 +24,7 @@ import { createCuePlayer, type Cue } from "./sound.ts";
 type RequestState =
   | { status: "loading" }
   | { status: "ready" }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; sessionExpired: boolean };
 
 const timeFormat = new Intl.DateTimeFormat("en", { timeStyle: "short" });
 
@@ -124,7 +124,11 @@ export class PrQuestApp extends LitElement {
       }
 
       const message = error instanceof Error ? error.message : "Something went wrong.";
-      this.request = { status: "error", message };
+      this.request = {
+        status: "error",
+        message,
+        sessionExpired: error instanceof ApiError && error.sessionExpired,
+      };
       this.announcement = "";
       this.#cue("error");
     }
@@ -181,6 +185,11 @@ export class PrQuestApp extends LitElement {
   #onRefresh = (): void => {
     this.#cue("start");
     void this.load();
+  };
+
+  #onReloadSession = (): void => {
+    // A full navigation, so Access can send the visitor to its sign-in page.
+    window.location.reload();
   };
 
   #onFilterInput = (event: InputEvent): void => {
@@ -392,8 +401,12 @@ export class PrQuestApp extends LitElement {
         <div class="game-over pixel-frame" role="alert">
           <h2 class="game-over-title typo-xl">Game over</h2>
           <p class="typo-default">${request.message}</p>
-          <button class="button typo-small pixel-frame" type="button" @click=${this.#onRefresh}>
-            Continue?
+          <button
+            class="button typo-small pixel-frame"
+            type="button"
+            @click=${request.sessionExpired ? this.#onReloadSession : this.#onRefresh}
+          >
+            ${request.sessionExpired ? "Reload session" : "Continue?"}
           </button>
         </div>
         ${payload ? this.#renderGroups(payload) : nothing}
