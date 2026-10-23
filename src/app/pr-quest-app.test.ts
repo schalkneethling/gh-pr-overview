@@ -461,7 +461,114 @@ describe("PR Quest app", () => {
       expect(
         await screen.findByText("Could not load your accounts. GitHub refused access."),
       ).toBeTruthy();
-      expect(screen.queryByRole("combobox")).toBeNull();
+      expect(screen.queryByRole("combobox", { name: "Show pull requests in" })).toBeNull();
+    });
+  });
+
+  describe("sorting", () => {
+    function questTitles(): (string | null)[] {
+      return screen
+        .getAllByRole("link", { name: /^(Add login|Speed up search|Fix footer)$/ })
+        .map((link) => link.textContent);
+    }
+
+    it("groups by repository until the player picks another order", async () => {
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      expect(await screen.findByRole("region", { name: "api" })).toBeTruthy();
+      expect(screen.getByRole<HTMLSelectElement>("combobox", { name: "Sort by" }).value).toBe(
+        "repository",
+      );
+    });
+
+    it("lists every pull request oldest first, without repository groups", async () => {
+      const user = userEvent.setup();
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      await screen.findByRole("region", { name: "api" });
+      await user.selectOptions(screen.getByRole("combobox", { name: "Sort by" }), "oldest");
+
+      expect(questTitles()).toEqual(["Fix footer", "Speed up search", "Add login"]);
+      expect(screen.queryByRole("region", { name: "api" })).toBeNull();
+      expect(screen.getByRole("region", { name: "3 open PRs" })).toBeTruthy();
+    });
+
+    it("lists every pull request newest first and names each repository", async () => {
+      const user = userEvent.setup();
+      const [login, search, footer] = payload().pullRequests;
+      // Oldest first, so only a real sort can produce newest first.
+      serve(() => jsonResponse(payload({ pullRequests: [footer!, search!, login!] })));
+      mount();
+
+      await screen.findByRole("region", { name: "api" });
+      await user.selectOptions(screen.getByRole("combobox", { name: "Sort by" }), "newest");
+
+      expect(questTitles()).toEqual(["Add login", "Speed up search", "Fix footer"]);
+      expect(screen.getAllByText("web")).toHaveLength(2);
+    });
+
+    it("announces the new order", async () => {
+      const user = userEvent.setup();
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      await screen.findByRole("region", { name: "api" });
+      const sort = screen.getByRole("combobox", { name: "Sort by" });
+      await user.selectOptions(sort, "oldest");
+
+      expect(screen.getByRole("status").textContent).toBe(
+        "Sorted oldest updated first, 3 pull requests.",
+      );
+
+      await user.selectOptions(sort, "repository");
+
+      expect(screen.getByRole("status").textContent).toBe("Grouped by repository.");
+    });
+
+    it("keeps the sort after a refresh", async () => {
+      const user = userEvent.setup();
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      await screen.findByRole("region", { name: "api" });
+      await user.selectOptions(screen.getByRole("combobox", { name: "Sort by" }), "oldest");
+      await user.click(screen.getByRole("button", { name: "Refresh" }));
+
+      await vi.waitFor(() => {
+        expect(pullRequestRequests()).toHaveLength(2);
+      });
+      expect(await screen.findByRole("region", { name: "3 open PRs" })).toBeTruthy();
+    });
+
+    it("keeps filtering while sorted", async () => {
+      const user = userEvent.setup();
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      await screen.findByRole("region", { name: "api" });
+      await user.selectOptions(screen.getByRole("combobox", { name: "Sort by" }), "oldest");
+      await user.type(screen.getByRole("searchbox"), "web");
+
+      expect(questTitles()).toEqual(["Fix footer", "Add login"]);
+    });
+
+    it("returns to repository groups with collapsed ones still collapsed", async () => {
+      const user = userEvent.setup();
+      serve(() => jsonResponse(payload()));
+      mount();
+
+      const web = await screen.findByRole("region", { name: "web" });
+      await user.click(within(web).getByRole("heading", { name: "web" }));
+      const sort = screen.getByRole("combobox", { name: "Sort by" });
+      await user.selectOptions(sort, "oldest");
+      await user.selectOptions(sort, "repository");
+
+      expect(
+        (await screen.findByRole("region", { name: "web" })).querySelector("details")?.open,
+      ).toBe(false);
+      expect(screen.getByRole("region", { name: "api" }).querySelector("details")?.open).toBe(true);
     });
   });
 

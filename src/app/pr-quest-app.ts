@@ -4,6 +4,9 @@ import { repeat } from "lit/directives/repeat.js";
 import {
   formatAsText,
   groupByRepository,
+  PULL_REQUEST_SORTS,
+  sortByUpdated,
+  type PullRequestSort,
   type PullRequestSummary,
   type PullRequestsPayload,
   type RepositoryGroup,
@@ -18,7 +21,9 @@ import {
   writeOwnerPreference,
   writeSoundPreference,
 } from "./preferences.ts";
+import { renderPullRequestList } from "./quest-list.ts";
 import { renderRepositoryGroup } from "./repository-group.ts";
+import { renderSortPicker, SORT_LABELS } from "./sort-picker.ts";
 import { createCuePlayer, type Cue } from "./sound.ts";
 
 type RequestState =
@@ -53,6 +58,7 @@ export class PrQuestApp extends LitElement {
     owners: { state: true },
     selectedOwner: { state: true },
     query: { state: true },
+    sort: { state: true },
     soundEnabled: { state: true },
     announcement: { state: true },
   };
@@ -63,6 +69,7 @@ export class PrQuestApp extends LitElement {
   /** null searches the server's default owner. */
   declare selectedOwner: string | null;
   declare query: string;
+  declare sort: PullRequestSort;
   declare soundEnabled: boolean;
   declare announcement: string;
 
@@ -83,6 +90,7 @@ export class PrQuestApp extends LitElement {
     this.owners = { status: "loading" };
     this.selectedOwner = readOwnerPreference();
     this.query = "";
+    this.sort = "repository";
     this.soundEnabled = readSoundPreference();
     this.announcement = "";
   }
@@ -220,6 +228,23 @@ export class PrQuestApp extends LitElement {
     this.#selectOwner(event.target.value);
   };
 
+  #onSortChange = (event: Event): void => {
+    if (!(event.target instanceof HTMLSelectElement)) {
+      return;
+    }
+
+    const { value } = event.target;
+    const sort = PULL_REQUEST_SORTS.find((candidate) => candidate === value);
+
+    if (sort) {
+      this.sort = sort;
+      this.announcement =
+        sort === "repository"
+          ? "Grouped by repository."
+          : `Sorted ${SORT_LABELS[sort].toLowerCase()}, ${pluralize(this.#visiblePullRequests().length, "pull request")}.`;
+    }
+  };
+
   #onWorldToggle(key: string, open: boolean): void {
     if (open) {
       this.#collapsedWorlds.delete(key);
@@ -238,6 +263,7 @@ export class PrQuestApp extends LitElement {
     const visible = this.#visiblePullRequests();
 
     try {
+      // Always grouped, whatever the sort: the text format mirrors the `gh` command this app replaces.
       await navigator.clipboard.writeText(formatAsText(groupByRepository(visible)));
       this.announcement = `Copied ${pluralize(visible.length, "pull request")} as text.`;
       this.#cue("copy");
@@ -340,12 +366,6 @@ export class PrQuestApp extends LitElement {
 
     return html`
       <div class="controls">
-        ${renderOwnerPicker({
-          state: this.owners,
-          selected:
-            this.selectedOwner ?? (this.owners.status === "ready" ? this.owners.defaultOwner : ""),
-          onChange: this.#onOwnerChange,
-        })}
         <search class="filter">
           <form @submit=${this.#onFilterSubmit}>
             <label class="filter-label typo-small" for="filter"
@@ -363,31 +383,41 @@ export class PrQuestApp extends LitElement {
             />
           </form>
         </search>
-        <div class="actions">
-          <button
-            class="button typo-small pixel-frame"
-            type="button"
-            ?disabled=${isLoading}
-            @click=${this.#onRefresh}
-          >
-            ${isLoading ? "Loading…" : "Refresh"}
-          </button>
-          <button
-            class="button typo-small pixel-frame"
-            type="button"
-            ?disabled=${!hasVisible}
-            @click=${this.#onCopy}
-          >
-            Copy as text
-          </button>
-          <button
-            class="button button-quiet typo-small pixel-frame"
-            type="button"
-            aria-pressed=${this.soundEnabled ? "true" : "false"}
-            @click=${this.#onToggleSound}
-          >
-            Sound
-          </button>
+        <div class="controls-row">
+          ${renderOwnerPicker({
+            state: this.owners,
+            selected:
+              this.selectedOwner ??
+              (this.owners.status === "ready" ? this.owners.defaultOwner : ""),
+            onChange: this.#onOwnerChange,
+          })}
+          ${renderSortPicker({ selected: this.sort, disabled: !hasData, onChange: this.#onSortChange })}
+          <div class="actions">
+            <button
+              class="button typo-small pixel-frame"
+              type="button"
+              ?disabled=${isLoading}
+              @click=${this.#onRefresh}
+            >
+              ${isLoading ? "Loading…" : "Refresh"}
+            </button>
+            <button
+              class="button typo-small pixel-frame"
+              type="button"
+              ?disabled=${!hasVisible}
+              @click=${this.#onCopy}
+            >
+              Copy as text
+            </button>
+            <button
+              class="button button-quiet typo-small pixel-frame"
+              type="button"
+              aria-pressed=${this.soundEnabled ? "true" : "false"}
+              @click=${this.#onToggleSound}
+            >
+              Sound
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -435,9 +465,9 @@ export class PrQuestApp extends LitElement {
       `;
     }
 
-    const groups = groupByRepository(this.#visiblePullRequests());
+    const visible = this.#visiblePullRequests();
 
-    if (groups.length === 0) {
+    if (visible.length === 0) {
       return html`
         <div class="all-clear pixel-frame">
           <h2 class="typo-xl">No matches</h2>
@@ -446,9 +476,14 @@ export class PrQuestApp extends LitElement {
       `;
     }
 
-    const maxCount = Math.max(...groups.map(({ pullRequests }) => pullRequests.length));
     const now = Date.now();
 
+    if (this.sort !== "repository") {
+      return renderPullRequestList(sortByUpdated(visible, this.sort), { now });
+    }
+
+    const groups = groupByRepository(visible);
+    const maxCount = Math.max(...groups.map(({ pullRequests }) => pullRequests.length));
     const worldKey = ({ repository }: RepositoryGroup): string => `${payload.owner}/${repository}`;
 
     // Keyed so each world keeps its element while filtering or a refresh moves it.
