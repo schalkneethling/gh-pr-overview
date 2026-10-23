@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { formatAsText, groupByRepository, type PullRequestSummary } from "./pull-requests.ts";
+import {
+  formatAsText,
+  groupByRepository,
+  sortByUpdated,
+  type PullRequestSummary,
+} from "./pull-requests.ts";
 
 function pullRequest(overrides: Partial<PullRequestSummary>): PullRequestSummary {
   return {
@@ -78,5 +83,39 @@ describe("formatAsText", () => {
 
   it("returns an empty string when there is nothing to copy", () => {
     expect(formatAsText([])).toBe("");
+  });
+});
+
+describe("sortByUpdated", () => {
+  const march = pullRequest({ number: 1, updatedAt: "2026-03-01T10:00:00Z" });
+  const june = pullRequest({ number: 2, updatedAt: "2026-06-01T10:00:00Z" });
+  const may = pullRequest({ number: 3, updatedAt: "2026-05-01T10:00:00Z" });
+
+  it("puts the least recently updated first for oldest", () => {
+    expect(sortByUpdated([june, march, may], "oldest").map(({ number }) => number)).toEqual([
+      1, 3, 2,
+    ]);
+  });
+
+  it("puts the most recently updated first for newest", () => {
+    expect(sortByUpdated([march, june, may], "newest").map(({ number }) => number)).toEqual([
+      2, 3, 1,
+    ]);
+  });
+
+  it("keeps the incoming order for equal timestamps", () => {
+    const first = pullRequest({ number: 10, updatedAt: "2026-03-01T10:00:00Z" });
+    const second = pullRequest({ number: 11, updatedAt: "2026-03-01T10:00:00Z" });
+
+    expect(sortByUpdated([first, second], "newest").map(({ number }) => number)).toEqual([10, 11]);
+    expect(sortByUpdated([first, second], "oldest").map(({ number }) => number)).toEqual([10, 11]);
+  });
+
+  it("does not mutate its input", () => {
+    const input = [june, march];
+
+    sortByUpdated(input, "oldest");
+
+    expect(input).toEqual([june, march]);
   });
 });

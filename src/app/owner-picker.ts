@@ -47,18 +47,16 @@ export function renderOwnerPicker({
   onChange,
 }: OwnerPickerOptions): TemplateResult {
   if (state.status === "error") {
-    return html`
-      <p class="owner-picker typo-small">Could not load your accounts. ${state.message}</p>
-    `;
+    return html` <p class="picker typo-small">Could not load your accounts. ${state.message}</p> `;
   }
 
   const isLoading = state.status === "loading";
 
   return html`
-    <div class="owner-picker">
+    <div class="picker">
       <label class="typo-small" for="owner">Show pull requests in</label>
       <select
-        class="owner-select typo-default pixel-frame"
+        class="picker-select typo-default pixel-frame"
         id="owner"
         ?disabled=${isLoading}
         @change=${onChange}

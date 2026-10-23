@@ -64,6 +64,15 @@ export interface RepositoryGroup {
   pullRequests: PullRequestSummary[];
 }
 
+/**
+ * How the browser orders pull requests. "repository" groups them by
+ * repository; the other two list them flat, ordered by when they were last
+ * updated.
+ */
+export const PULL_REQUEST_SORTS = ["repository", "oldest", "newest"] as const;
+
+export type PullRequestSort = (typeof PULL_REQUEST_SORTS)[number];
+
 export const PULL_REQUESTS_ENDPOINT = "/api/pull-requests";
 export const OWNERS_ENDPOINT = "/api/owners";
 /** Query parameter of PULL_REQUESTS_ENDPOINT that picks the owner to search. */
@@ -89,6 +98,21 @@ export function groupByRepository(pullRequests: readonly PullRequestSummary[]): 
   return [...groups.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([repository, items]) => ({ repository, pullRequests: items }));
+}
+
+/**
+ * Orders pull requests by last update. Equal timestamps keep their incoming
+ * order, so the result does not shuffle between renders.
+ */
+export function sortByUpdated(
+  pullRequests: readonly PullRequestSummary[],
+  direction: Exclude<PullRequestSort, "repository">,
+): PullRequestSummary[] {
+  const sign = direction === "oldest" ? 1 : -1;
+
+  return [...pullRequests].sort(
+    (a, b) => sign * (Date.parse(a.updatedAt) - Date.parse(b.updatedAt)),
+  );
 }
 
 /**

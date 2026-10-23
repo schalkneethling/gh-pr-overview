@@ -196,24 +196,30 @@ pr-quest-app {
 /* ---------- Controls ---------- */
 
 .controls {
+  display: grid;
+  gap: var(--space-l);
+}
+
+/* The selects and the action buttons share one row, wrapping on narrow screens. */
+.controls-row {
   align-items: end;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-l);
 }
 
-/* ---------- Owner picker ----------
- * Native select styles first, so browsers without customizable select still
- * get a pixel panel. The @supports block below opts in to base-select.
+/* ---------- Pickers ----------
+ * The owner and sort selects share these styles. Native select styles
+ * first, so browsers without customizable select still get a pixel panel. The @supports block below opts in to base-select.
  */
 
-.owner-picker {
+.picker {
   display: grid;
   flex: 0 1 18rem;
   gap: var(--space-s);
 }
 
-.owner-select {
+.picker-select {
   border: 0;
   border-radius: 0;
   color: var(--color-text);
@@ -223,7 +229,7 @@ pr-quest-app {
   padding: var(--space-s) var(--space-m);
 }
 
-.owner-select:disabled {
+.picker-select:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
@@ -235,36 +241,36 @@ pr-quest-app {
 
 /* stylelint-disable plugin/use-baseline -- Progressive enhancement: this block applies only where customizable select is supported. */
 @supports (appearance: base-select) {
-  .owner-select,
-  .owner-select::picker(select) {
+  .picker-select,
+  .picker-select::picker(select) {
     appearance: base-select;
   }
 
-  .owner-select {
+  .picker-select {
     align-items: center;
     display: flex;
     gap: var(--space-s);
   }
 
   /* Matches .button hover, so every control on the page reacts the same way. */
-  .owner-select:open,
-  .owner-select:hover:not(:disabled) {
+  .picker-select:open,
+  .picker-select:hover:not(:disabled) {
     background-color: var(--color-button-hover);
     color: var(--color-on-button-hover);
   }
 
-  .owner-select:open::picker-icon {
+  .picker-select:open::picker-icon {
     rotate: 180deg;
   }
 
-  .owner-select selectedcontent {
+  .picker-select selectedcontent {
     align-items: center;
     display: flex;
     gap: var(--space-s);
   }
 
   /* The picker is another pixel-frame panel, dropped below the button. */
-  .owner-select::picker(select) {
+  .picker-select::picker(select) {
     background-color: var(--color-panel);
     border: 0;
     box-shadow:
@@ -278,7 +284,7 @@ pr-quest-app {
     padding: var(--space-xs);
   }
 
-  .owner-select option {
+  .picker-select option {
     align-items: center;
     display: flex;
     gap: var(--space-s);
@@ -286,32 +292,28 @@ pr-quest-app {
     padding: var(--space-xs) var(--space-s);
   }
 
-  .owner-select option:hover,
-  .owner-select option:focus-visible {
+  .picker-select option:hover,
+  .picker-select option:focus-visible {
     background-color: var(--color-button-hover);
     color: var(--color-on-button-hover);
   }
 
-  .owner-select option:checked {
+  .picker-select option:checked {
     font-weight: 700;
   }
 
-  /* The menu cursor from the quest list marks the current owner. */
-  .owner-select option::checkmark {
+  /* The menu cursor from the quest list marks the current choice. */
+  .picker-select option::checkmark {
     content: "▶";
   }
 
   @media (forced-colors: active) {
-    .owner-select::picker(select) {
+    .picker-select::picker(select) {
       border: 2px solid CanvasText;
     }
   }
 }
 /* stylelint-enable plugin/use-baseline */
-
-.filter {
-  flex: 1 1 18rem;
-}
 
 .filter form {
   display: grid;
@@ -501,6 +503,11 @@ pr-quest-app {
   display: grid;
   gap: var(--space-m);
   margin-block-start: var(--space-m);
+}
+
+/* Flat list: the repository name sits in the meta line, since no heading names it. */
+.quest-repository {
+  font-weight: 700;
 }
 
 .world-more {

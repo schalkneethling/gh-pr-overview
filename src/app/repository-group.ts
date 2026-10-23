@@ -1,8 +1,9 @@
 import { html, type TemplateResult } from "lit";
 import { styleMap } from "lit/directives/style-map.js";
 
-import type { PullRequestSummary, RepositoryGroup, ReviewStatus } from "../shared/pull-requests.ts";
-import { formatRelativeTime, pluralize } from "./format.ts";
+import type { RepositoryGroup } from "../shared/pull-requests.ts";
+import { pluralize } from "./format.ts";
+import { renderQuest } from "./quest-list.ts";
 
 interface RepositoryGroupOptions {
   owner: string;
@@ -14,27 +15,6 @@ interface RepositoryGroupOptions {
   open: boolean;
   /** Called when the player expands or collapses the world. */
   onToggle: (open: boolean) => void;
-}
-
-// Entry animations stop staggering after this many rows so long lists settle quickly.
-const MAX_STAGGER_STEPS = 12;
-
-const REVIEW_STATUS_LABELS: Readonly<Record<ReviewStatus, string>> = {
-  approved: "Approved",
-  "changes-requested": "Changes requested",
-  "awaiting-review": "Awaiting review",
-};
-
-// Drafts are not ready for review yet, so their review status would mislead.
-function renderReviewStatus({ draft, reviewStatus }: PullRequestSummary): TemplateResult | null {
-  if (draft || reviewStatus === null) {
-    return null;
-  }
-
-  // The hidden prefix tells screen reader users what "Approved" refers to.
-  return html`<span class="review-status" data-status=${reviewStatus}
-    ><span class="visually-hidden">Review status: </span>${REVIEW_STATUS_LABELS[reviewStatus]}</span
-  >`;
 }
 
 function repositoryPullsUrl(owner: string, repository: string): string {
@@ -69,28 +49,8 @@ export function renderRepositoryGroup(
         </summary>
         <div class="world-body">
           <ul class="quest-list">
-            ${pullRequests.map(
-              (pullRequest, position) => html`
-                <li
-                  class="quest"
-                  style=${styleMap({ "--stagger": String(Math.min(position, MAX_STAGGER_STEPS)) })}
-                >
-                  <a class="quest-link typo-default" href=${pullRequest.url}
-                    >${pullRequest.title}</a
-                  >
-                  <p class="quest-meta typo-small">
-                    <span class="quest-number">#${pullRequest.number}</span>
-                    ${pullRequest.draft ? html`<span class="badge">Draft</span>` : null}
-                    <span
-                      >Updated
-                      <time datetime=${pullRequest.updatedAt}
-                        >${formatRelativeTime(pullRequest.updatedAt, now)}</time
-                      ></span
-                    >
-                    ${renderReviewStatus(pullRequest)}
-                  </p>
-                </li>
-              `,
+            ${pullRequests.map((pullRequest, position) =>
+              renderQuest(pullRequest, { position, now }),
             )}
           </ul>
           <p class="world-more typo-small">
