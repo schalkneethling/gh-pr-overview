@@ -42,7 +42,7 @@
     "varlock": "^1.23.0",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "wrangler": "^4.148.0"
+    "wrangler": "^4.151.0"
   },
   "devEngines": {
     "packageManager": {
