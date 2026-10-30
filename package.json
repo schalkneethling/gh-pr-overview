@@ -30,7 +30,7 @@
     "@testing-library/dom": "^10.4.2",
     "@testing-library/user-event": "^14.6.8",
     "@varlock/1password-plugin": "^2.0.4",
-    "@varlock/cloudflare-integration": "^1.6.0",
+    "@varlock/cloudflare-integration": "^1.6.2",
     "happy-dom": "^21.0.3",
     "html-validate": "^11.16.2",
     "stylelint": "^17.16.0",
