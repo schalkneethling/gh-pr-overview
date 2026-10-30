@@ -32,7 +32,7 @@
     "@varlock/1password-plugin": "^2.0.4",
     "@varlock/cloudflare-integration": "^1.6.0",
     "happy-dom": "^21.0.3",
-    "html-validate": "^11.16.2",
+    "html-validate": "^11.17.0",
     "stylelint": "^17.16.0",
     "stylelint-config-standard": "^40.0.0",
     "stylelint-order": "^8.1.1",
